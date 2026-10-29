@@ -4,11 +4,14 @@ export function initAuth(onLoginSuccess) {
   const panels = document.querySelectorAll('.panel');
   const track = document.getElementById('track');
   const togglePassBtns = document.querySelectorAll('[data-toggle-password]');
-  const errorMsg = document.getElementById('auth-error');
+  const loginErrorMsg = document.getElementById('auth-error');
+  const regErrorMsg = document.getElementById('reg-error');
 
   function syncHeight() {
     const active = document.querySelector('.panel.is-active');
-    track.style.height = active.offsetHeight + 'px';
+    if (active && track) {
+      track.style.height = active.offsetHeight + 'px';
+    }
   }
 
   function setMode(mode) {
@@ -30,57 +33,65 @@ export function initAuth(onLoginSuccess) {
   togglePassBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       const input = document.getElementById(btn.dataset.togglePassword);
-      const isPass = input.type === 'password';
-      input.type = isPass ? 'text' : 'password';
-      btn.setAttribute('aria-pressed', String(isPass));
+      if (input) {
+        const isPass = input.type === 'password';
+        input.type = isPass ? 'text' : 'password';
+        btn.setAttribute('aria-pressed', String(isPass));
+      }
     });
   });
 
-  document.getElementById('form-login').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    errorMsg.textContent = '';
-    const btn = document.getElementById('btn-login');
-    btn.classList.add('is-loading');
+  const loginForm = document.getElementById('form-login');
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (loginErrorMsg) loginErrorMsg.textContent = '';
+      const btn = document.getElementById('btn-login');
+      if (btn) btn.classList.add('is-loading');
 
-    try {
-      const username = document.getElementById('login-user').value.trim();
-      const password = document.getElementById('login-password').value;
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Ошибка входа');
-      onLoginSuccess(data.user);
-    } catch (err) {
-      errorMsg.textContent = err.message;
-    } finally {
-      btn.classList.remove('is-loading');
-    }
-  });
+      try {
+        const username = document.getElementById('login-user').value.trim();
+        const password = document.getElementById('login-password').value;
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Ошибка входа');
+        onLoginSuccess(data.user);
+      } catch (err) {
+        if (loginErrorMsg) loginErrorMsg.textContent = err.message;
+      } finally {
+        if (btn) btn.classList.remove('is-loading');
+      }
+    });
+  }
 
-  document.getElementById('form-register').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    errorMsg.textContent = '';
-    const btn = document.getElementById('btn-register');
-    btn.classList.add('is-loading');
+  const registerForm = document.getElementById('form-register');
+  if (registerForm) {
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (regErrorMsg) regErrorMsg.textContent = '';
+      const btn = document.getElementById('btn-register');
+      if (btn) btn.classList.add('is-loading');
 
-    try {
-      const username = document.getElementById('reg-user').value.trim();
-      const password = document.getElementById('reg-password').value;
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Ошибка регистрации');
-      onLoginSuccess(data.user);
-    } catch (err) {
-      errorMsg.textContent = err.message;
-    } finally {
-      btn.classList.remove('is-loading');
-    }
-  });
+      try {
+        const username = document.getElementById('reg-user').value.trim();
+        const password = document.getElementById('reg-password').value;
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Ошибка регистрации');
+        onLoginSuccess(data.user);
+      } catch (err) {
+        if (regErrorMsg) regErrorMsg.textContent = err.message;
+      } finally {
+        if (btn) btn.classList.remove('is-loading');
+      }
+    });
+  }
 }
