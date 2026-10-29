@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kaguya Diary</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+</head>
+<body>
+    <div id="auth-container" class="auth-wrapper">
+        <div class="auth-card">
+            <h1>Kaguya Diary</h1>
+            <p class="subtitle">Электронный дневник 9 «В» класса</p>
+            <div class="auth-tabs">
+                <button id="tab-login" class="active" onclick="switchTab('login')">Войти</button>
+                <button id="tab-register" onclick="switchTab('register')">Регистрация</button>
+            </div>
+            <form id="auth-form" onsubmit="handleAuth(event)">
+                <div class="input-group">
+                    <label for="username">Имя пользователя</label>
+                    <input type="text" id="username" required placeholder="Введите имя...">
+                </div>
+                <div class="input-group password-group">
+                    <label for="password">Пароль</label>
+                    <input type="password" id="password" required placeholder="Введите пароль...">
+                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility()">👁</button>
+                </div>
+                <div id="auth-error" class="error-message"></div>
+                <button type="submit" id="auth-submit-btn" class="btn primary">Войти</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="app-container" class="app-wrapper hidden">
+        <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h2>Kaguya Diary</h2>
+                <button onclick="toggleSidebar()">×</button>
+            </div>
+            <ul class="sidebar-nav">
+                <li onclick="switchSection('library')">📚 Электронная библиотека</li>
+                <li onclick="switchSection('schedule')">📅 Расписание уроков</li>
+                <li onclick="switchSection('homework-write')">✍️ Написать ДЗ</li>
+                <li onclick="switchSection('homework-view')">📖 Посмотреть ДЗ</li>
+                <li onclick="switchSection('statistics')">📊 Моя статистика</li>
+                <li onclick="logout()" class="logout-btn">🚪 Выйти из аккаунта</li>
+            </ul>
+        </aside>
+
+        <header class="main-header">
+            <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+            <div class="logo-area" onclick="switchSection('library')">Kaguya Diary</div>
+            <div class="user-info">
+                <span id="current-username">Пользователь</span>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <section id="section-library" class="content-section active">
+                <div class="welcome-banner">
+                    <h2 id="welcome-msg">Добро пожаловать!</h2>
+                    <input type="text" id="book-search" placeholder="Поиск книг по названию..." oninput="filterBooks()">
+                </div>
+                <div id="books-grid" class="books-grid"></div>
+            </section>
+
+            <section id="section-reader" class="content-section">
+                <div class="reader-toolbar">
+                    <button class="btn secondary" onclick="switchSection('library')">← Назад в библиотеку</button>
+                    <h3 id="reader-book-title">Название книги</h3>
+                    <div class="reader-controls">
+                        <button onclick="changePage(-1)">-</button>
+                        <span>Стр. <span id="page-num">1</span> из <span id="page-count">1</span></span>
+                        <button onclick="changePage(1)">+</button>
+                    </div>
+                </div>
+                <div class="pdf-viewer-container">
+                    <canvas id="pdf-canvas"></canvas>
+                </div>
+            </section>
+
+            <section id="section-schedule" class="content-section">
+                <h2>Расписание уроков (9 «В»)</h2>
+                <div id="schedule-container" class="schedule-grid"></div>
+            </section>
+
+            <section id="section-homework-write" class="content-section">
+                <h2>Написать домашнее задание</h2>
+                <form id="hw-form" onsubmit="submitHomework(event)">
+                    <div class="input-group">
+                        <label>День недели</label>
+                        <select id="hw-weekday" onchange="updateSubjects()" required>
+                            <option value="">Выберите день...</option>
+                            <option value="Понедельник">Понедельник</option>
+                            <option value="Вторник">Вторник</option>
+                            <option value="Среда">Среда</option>
+                            <option value="Четверг">Четверг</option>
+                            <option value="Пятница">Пятница</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Номер урока и Предмет</label>
+                        <select id="hw-subject-select" required>
+                            <option value="">Сначала выберите день недели...</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Текст домашнего задания</label>
+                        <textarea id="hw-description" rows="4" required placeholder="Введите задание..."></textarea>
+                    </div>
+                    <div class="input-group">
+                        <label>Дата выполнения (необязательно)</label>
+                        <input type="date" id="hw-duedate">
+                    </div>
+                    <div id="hw-error" class="error-message"></div>
+                    <button type="submit" class="btn primary">Сохранить задание</button>
+                </form>
+            </section>
+
+            <section id="section-homework-view" class="content-section">
+                <h2>Список домашних заданий</h2>
+                <div class="hw-filters">
+                    <button class="filter-btn active" onclick="filterHw('all')">Все</button>
+                    <button class="filter-btn" onclick="filterHw('uncompleted')">Невыполненные</button>
+                    <button class="filter-btn" onclick="filterHw('completed')">Выполненные</button>
+                </div>
+                <div id="homework-list" class="homework-list"></div>
+            </section>
+
+            <section id="section-statistics" class="content-section">
+                <h2>Моя статистика</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Доступные книги</h3>
+                        <p id="stat-books">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Всего заданий</h3>
+                        <p id="stat-hw-total">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Выполнено</h3>
+                        <p id="stat-hw-completed">0</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>
